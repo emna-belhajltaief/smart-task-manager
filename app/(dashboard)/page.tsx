@@ -1,8 +1,30 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, LogOut } from 'lucide-react';
+import { createBrowserClient } from "@supabase/ssr";
+import { useEffect, useState, useMemo } from "react";
+import type { User } from "@supabase/supabase-js";
 
 export default function DashboardPage() {
+  const [user, setUser] = useState<User | null>(null);
+  
+  const supabase = useMemo(() => createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  ), []);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+    });
+  }, [supabase]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  };
   const mockStats = {
     total_tasks_created: 42,
     total_tasks_completed: 28,
@@ -38,12 +60,9 @@ export default function DashboardPage() {
       <div>
         <div className="flex items-center gap-3 mb-2">
           <h1 className="text-4xl font-bold">Dashboard</h1>
-          <span className="px-3 py-1 text-xs font-bold bg-yellow-100 text-yellow-800 rounded-full">
-            MODE DÉMO
-          </span>
         </div>
         <p className="text-gray-600 text-lg">
-          Bienvenue <strong>admin@test.com</strong> ! 👋
+          Welcome <strong>{user?.email || "..."}</strong>! 
         </p>
       </div>
 
@@ -124,12 +143,10 @@ export default function DashboardPage() {
         <Button 
           variant="outline" 
           className="gap-2"
-          onClick={() => {
-            alert("Déconnexion...");
-            window.location.href = "/login";
-          }}
+          onClick={handleLogout}
         >
-          🚪 Se déconnecter
+          <LogOut className="w-4 h-4" />
+          Sign Out
         </Button>
       </div>
     </div>
