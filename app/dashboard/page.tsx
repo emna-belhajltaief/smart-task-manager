@@ -237,11 +237,11 @@ export default function DashboardPage() {
         <div className="p-3 border-t border-slate-100">
           <div className="flex items-center gap-2.5 px-2 py-2">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
-              {user?.email?.charAt(0).toUpperCase()}
+              {(user?.user_metadata?.full_name || user?.email)?.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-slate-900 truncate">
-                {user?.email?.split("@")[0]}
+                {user?.user_metadata?.full_name || user?.email?.split("@")[0]}
               </p>
               <p className="text-xs text-slate-400 truncate">{user?.email}</p>
             </div>
@@ -280,7 +280,7 @@ export default function DashboardPage() {
           {/* Welcome Header */}
           <div className="mb-8 animate-fade-in">
             <h1 className="text-2xl font-bold text-slate-900">
-              {greeting()}, {user?.email?.split("@")[0]} 
+              {greeting()}, {user?.user_metadata?.full_name || user?.email?.split("@")[0]} 
             </h1>
             <p className="text-slate-500 mt-1">
               Here&apos;s an overview of your projects
