@@ -164,9 +164,9 @@ export default function BoardPage() {
       setLists(newLists);
       
       const items = newLists.map((l, index) => ({
-        id: l.id,
-        position: index,
-      }));
+      id: l.id,
+      position: index,
+    }));
       await reorderLists(boardId, items);
       return;
     }
@@ -457,18 +457,18 @@ export default function BoardPage() {
         {/* Board Canvas */}
         <main className="flex-1 overflow-x-auto overflow-y-hidden">
           <div className="h-full p-4 lg:p-6">
-            <DndContext
+    <DndContext
               sensors={sensors}
-              collisionDetection={closestCenter}
+      collisionDetection={closestCenter}
               onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={lists.map((l) => l.id)}
-                strategy={horizontalListSortingStrategy}
-              >
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext
+        items={lists.map((l) => l.id)}
+        strategy={horizontalListSortingStrategy}
+      >
                 <div className="flex gap-4 h-full items-start pb-4">
-                  {lists.map((list) => (
+          {lists.map((list) => (
                     <KanbanList
                       key={list.id}
                       list={list}
@@ -531,13 +531,13 @@ export default function BoardPage() {
                       </button>
                     )}
                   </div>
-                </div>
-              </SortableContext>
+        </div>
+      </SortableContext>
 
               <DragOverlay>
                 {activeTask && <TaskCardOverlay task={activeTask} />}
               </DragOverlay>
-            </DndContext>
+    </DndContext>
 
             {/* Empty State */}
             {lists.length === 0 && (

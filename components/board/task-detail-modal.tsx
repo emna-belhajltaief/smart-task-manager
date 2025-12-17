@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { 
   Calendar, 
@@ -9,7 +9,11 @@ import {
   Loader2, 
   Trash2, 
   Check,
-  X
+  X,
+  ListTodo,
+  Plus,
+  Square,
+  CheckSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +22,13 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
+
+interface Subtask {
+  id: string;
+  title: string;
+  is_completed: boolean;
+  position: number;
+}
 
 interface Task {
   id: string;
@@ -50,6 +61,11 @@ export function TaskDetailModal({ task, open, onOpenChange, onUpdate }: TaskDeta
   const [dueDate, setDueDate] = useState(task.due_date?.split("T")[0] || "");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  
+  // Subtasks state
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [loadingSubtasks, setLoadingSubtasks] = useState(false);
 
   const supabase = useMemo(
     () =>
@@ -59,6 +75,65 @@ export function TaskDetailModal({ task, open, onOpenChange, onUpdate }: TaskDeta
       ),
     []
   );
+
+  // Fetch subtasks when modal opens
+  useEffect(() => {
+    const loadSubtasks = async () => {
+      setLoadingSubtasks(true);
+      const { data } = await supabase
+        .from("subtasks")
+        .select("*")
+        .eq("task_id", task.id)
+        .order("position", { ascending: true });
+      
+      setSubtasks(data || []);
+      setLoadingSubtasks(false);
+    };
+
+    if (open && task.id) {
+      loadSubtasks();
+    }
+  }, [open, task.id, supabase]);
+
+  const addSubtask = async () => {
+    if (!newSubtaskTitle.trim()) return;
+    
+    const { data } = await supabase
+      .from("subtasks")
+      .insert({
+        task_id: task.id,
+        title: newSubtaskTitle,
+        position: subtasks.length,
+      })
+      .select()
+      .single();
+
+    if (data) {
+      setSubtasks([...subtasks, data]);
+      setNewSubtaskTitle("");
+    }
+  };
+
+  const toggleSubtask = async (subtaskId: string, isCompleted: boolean) => {
+    await supabase
+      .from("subtasks")
+      .update({ is_completed: isCompleted })
+      .eq("id", subtaskId);
+
+    setSubtasks(
+      subtasks.map((s) =>
+        s.id === subtaskId ? { ...s, is_completed: isCompleted } : s
+      )
+    );
+  };
+
+  const deleteSubtask = async (subtaskId: string) => {
+    await supabase.from("subtasks").delete().eq("id", subtaskId);
+    setSubtasks(subtasks.filter((s) => s.id !== subtaskId));
+  };
+
+  const completedCount = subtasks.filter((s) => s.is_completed).length;
+  const progressPercent = subtasks.length > 0 ? (completedCount / subtasks.length) * 100 : 0;
 
   const handleSave = async () => {
     setSaving(true);
@@ -165,6 +240,102 @@ export function TaskDetailModal({ task, open, onOpenChange, onUpdate }: TaskDeta
                   <X className="w-4 h-4" />
                 </button>
               )}
+            </div>
+          </div>
+
+          {/* Subtasks */}
+          <div>
+            <label className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+              <ListTodo className="w-3.5 h-3.5" />
+              Subtasks
+              {subtasks.length > 0 && (
+                <span className="text-violet-600 ml-1">
+                  ({completedCount}/{subtasks.length})
+                </span>
+              )}
+            </label>
+
+            {/* Progress bar */}
+            {subtasks.length > 0 && (
+              <div className="mb-4">
+                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-violet-500 to-purple-500 transition-all duration-300"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Subtasks list */}
+            <div className="space-y-2 mb-3">
+              {loadingSubtasks ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-4 h-4 animate-spin text-violet-500" />
+                </div>
+              ) : (
+                subtasks.map((subtask) => (
+                  <div
+                    key={subtask.id}
+                    className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all group ${
+                      subtask.is_completed
+                        ? "bg-slate-50 border-slate-200"
+                        : "bg-white border-slate-200 hover:border-violet-300"
+                    }`}
+                  >
+                    <button
+                      onClick={() => toggleSubtask(subtask.id, !subtask.is_completed)}
+                      className="shrink-0"
+                    >
+                      {subtask.is_completed ? (
+                        <CheckSquare className="w-5 h-5 text-violet-600" />
+                      ) : (
+                        <Square className="w-5 h-5 text-slate-400 hover:text-violet-500 transition-colors" />
+                      )}
+                    </button>
+                    <span
+                      className={`flex-1 text-sm ${
+                        subtask.is_completed
+                          ? "text-slate-400 line-through"
+                          : "text-slate-700"
+                      }`}
+                    >
+                      {subtask.title}
+                    </span>
+                    <button
+                      onClick={() => deleteSubtask(subtask.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded text-slate-400 hover:text-red-500 transition-all"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Add subtask input */}
+            <div className="flex gap-2">
+              <Input
+                value={newSubtaskTitle}
+                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addSubtask();
+                  }
+                }}
+                placeholder="Add a subtask..."
+                className="text-sm"
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={addSubtask}
+                disabled={!newSubtaskTitle.trim()}
+                className="shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </div>
